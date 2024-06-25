@@ -11,20 +11,27 @@ fn main() {
 
     let branch_name = format!("{}_{}", ticket_number.trim().to_uppercase(), to_pascal_case(ticket_description.trim()));
 
-    checkout_new_branch(branch_name);
+    match checkout_new_branch(&branch_name) {
+        Ok(_) => println!("Checked out new branch: {}", branch_name),
+        Err(error) => println!("Failed to checkout new branch: {}. /nError: {}", branch_name, error),
+    }
 }
 
-fn checkout_new_branch(branch_name: String) {
-    let current_dir = env::current_dir().expect("could not get current directory.");
+fn checkout_new_branch(branch_name: &str) -> Result<(), std::io::Error> {
+    let current_dir = env::current_dir().expect("Could not get current directory.");
 
-    let output = Command::new("git").arg("checkout").arg("-b").arg(&branch_name).current_dir(&current_dir).output().expect("failed to execute process");
-    
+    let output = Command::new("git")
+        .arg("checkout")
+        .arg("-b")
+        .arg(branch_name)
+        .current_dir(&current_dir)
+        .output()?;
+
     if output.status.success() {
-        println!("Checked out new branch: {}", branch_name);
+        Ok(())
     } else {
-        println!("Failed to checkout new branch: {}", branch_name);
+        Err(std::io::Error::new(std::io::ErrorKind::Other, "Failed to execute Git command"))
     }
-
 }
 
 fn input_ticket_number() -> String {
@@ -32,6 +39,10 @@ fn input_ticket_number() -> String {
     loop {
         println!("What is the ticket number?");
         io::stdin().read_line(&mut ticket_number).expect("Failed to read ticket number");
+
+        if ticket_number.trim().to_lowercase() == "exit" {
+            std::process::exit(0); // Exit the program if user enters 'exit'
+        }
         
         if ticket_number.trim().chars().all(|c| c.is_alphanumeric() || c == '-') {
             break;
@@ -46,6 +57,9 @@ fn input_description() -> String {
     println!("Enter a brief descriion of the ticket");
     let mut ticket_description = String::new();
     io::stdin().read_line(&mut ticket_description).expect("Failed to read line");
+    if ticket_description.trim().to_lowercase() == "exit" {
+        std::process::exit(0); // Exit the program if user enters 'exit'
+    }
 
     return ticket_description;
 }
